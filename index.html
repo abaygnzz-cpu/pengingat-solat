@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Penghitung Kalori & Protein Harian</title>
+
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .card { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .fade-in { animation: fadeIn .5s ease-in; }
+    @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+  </style>
+</head>
+
+<body class="bg-gradient-to-b from-gray-100 to-gray-200 text-gray-900 min-h-screen">
+
+  <div class="max-w-3xl mx-auto mt-8 bg-white p-6 rounded-2xl card fade-in">
+    <h1 class="text-2xl font-bold text-center mb-6 text-blue-700">
+      🍱 Penghitung Kalori & Protein Harian
+    </h1>
+
+    <!-- Bagian Data Pengguna -->
+    <section class="border-b pb-4 mb-5">
+      <h2 class="text-lg font-semibold mb-3">📋 Data Pengguna</h2>
+
+      <div class="grid grid-cols-2 gap-3">
+        <select id="gender" class="border p-2 rounded">
+          <option value="">Jenis Kelamin</option>
+          <option value="pria">Pria</option>
+          <option value="wanita">Wanita</option>
+        </select>
+        <input id="age" type="number" placeholder="Usia (tahun)" class="border p-2 rounded">
+        <input id="weight" type="number" placeholder="Berat (kg)" class="border p-2 rounded">
+        <input id="height" type="number" placeholder="Tinggi (cm)" class="border p-2 rounded">
+      </div>
+
+      <div class="mt-3">
+        <select id="activity" class="border rounded w-full p-2 mb-2">
+          <option value="">Pilih Aktivitas</option>
+          <option value="1.2">Sangat ringan</option>
+          <option value="1.375">Ringan</option>
+          <option value="1.55">Sedang</option>
+          <option value="1.725">Berat</option>
+          <option value="1.9">Sangat berat</option>
+        </select>
+        <select id="goal" class="border rounded w-full p-2">
+          <option value="">Pilih Tujuan</option>
+          <option value="defisit">Defisit (turun berat)</option>
+          <option value="maintenance">Stabil</option>
+          <option value="surplus">Surplus (naik berat)</option>
+        </select>
+      </div>
+
+      <button onclick="calculateNeeds()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded w-full font-semibold">
+        Hitung Kebutuhan
+      </button>
+
+      <p id="dailyNeed" class="text-center mt-3 font-semibold text-blue-700"></p>
+    </section>
+
+    <!-- Input Makanan -->
+    <section>
+      <h2 class="text-lg font-semibold mb-2">🥗 Input Makanan</h2>
+
+      <div class="flex gap-2 mb-3">
+        <input id="foodName" type="text" placeholder="Nama makanan (misal: nasi goreng)" class="flex-1 border rounded p-2">
+        <input id="foodGram" type="number" placeholder="Gram" class="w-24 border rounded p-2">
+        <button onclick="addFood()" class="bg-green-600 hover:bg-green-700 text-white px-4 rounded font-semibold">+</button>
+      </div>
+
+      <ul id="foodList" class="space-y-1 text-sm list-disc list-inside"></ul>
+
+      <div class="text-center mt-4">
+        <p class="text-lg font-semibold">Total Kalori:
+          <span id="totalCalories" class="text-blue-700">0</span> kcal
+        </p>
+        <p class="text-lg font-semibold">Total Protein:
+          <span id="totalProtein" class="text-green-700">0</span> g
+        </p>
+        <p id="status" class="mt-2 text-sm font-semibold"></p>
+
+        <button onclick="resetAll()" class="mt-3 bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded text-sm">
+          Reset Semua
+        </button>
+      </div>
+    </section>
+
+    <!-- Grafik -->
+    <section class="mt-6">
+      <h2 class="text-lg font-semibold mb-2">📊 Grafik Progres Kalori</h2>
+      <canvas id="calorieChart" height="100"></canvas>
+    </section>
+  </div>
+
+  <script>
+    // ==============================
+    // DATABASE MAKANAN
+    // ==============================
+    const foodDB = {
+      "nasi putih": { cal: 130, protein: 2.7 },
+      "nasi goreng": { cal: 240, protein: 6 },
+      "ayam goreng": { cal: 260, protein: 27 },
+      "telur rebus": { cal: 155, protein: 13 },
+      "ikan bakar": { cal: 180, protein: 28 },
+      "tahu goreng": { cal: 190, protein: 10 },
+      "tempe goreng": { cal: 193, protein: 11 },
+      "rendang": { cal: 250, protein: 27 },
+      "sate ayam": { cal: 270, protein: 25 },
+      "bakso sapi": { cal: 180, protein: 12 },
+      "mie goreng": { cal: 350, protein: 8 },
+      "nasi uduk": { cal: 320, protein: 5 },
+      "nasi kuning": { cal: 310, protein: 6 },
+      "sayur bayam": { cal: 40, protein: 3 },
+      "capcay": { cal: 120, protein: 6 },
+      "gado-gado": { cal: 180, protein: 8 },
+      "pisang goreng": { cal: 250, protein: 3 },
+      "martabak telur": { cal: 400, protein: 14 },
+      "jus alpukat": { cal: 180, protein: 3 }
+    };
+
+    // ==============================
+    // VARIABEL PENYIMPANAN
+    // ==============================
+    let totalCalories = +localStorage.getItem("totalCalories") || 0;
+    let totalProtein = +localStorage.getItem("totalProtein") || 0;
+    let dailyNeed = +localStorage.getItem("dailyNeed") || 0;
+    let proteinNeed = +localStorage.getItem("proteinNeed") || 0;
+    let foodList = JSON.parse(localStorage.getItem("foodList")) || [];
+
+    const totalCalEl = document.getElementById("totalCalories");
+    const totalProtEl = document.getElementById("totalProtein");
+    const dailyNeedEl = document.getElementById("dailyNeed");
+    const statusEl = document.getElementById("status");
+    const foodListEl = document.getElementById("foodList");
+    let chart;
+
+    window.onload = () => {
+      renderList();
+      updateStatus();
+      initChart();
+    };
+
+    // ==============================
+    // FUNGSI PERHITUNGAN
+    // ==============================
+    function calculateNeeds() {
+      const g = val("gender"), a = num("age"), w = num("weight"), h = num("height"), act = num("activity"), goal = val("goal");
+      if (!g || !a || !w || !h || !act || !goal) return alert("Lengkapi semua data!");
+      const bmr = g === "pria"
+        ? 88.362 + (13.397*w) + (4.799*h) - (5.677*a)
+        : 447.593 + (9.247*w) + (3.098*h) - (4.330*a);
+      let tdee = bmr * act;
+      if (goal==="defisit") tdee -= 500;
+      if (goal==="surplus") tdee += 500;
+      dailyNeed = Math.round(tdee);
+      proteinNeed = Math.round(w * 1.6);
+      localStorage.setItem("dailyNeed", dailyNeed);
+      localStorage.setItem("proteinNeed", proteinNeed);
+      dailyNeedEl.innerHTML = `Kebutuhan Kalori: <b>${dailyNeed} kcal</b> | Protein: <b>${proteinNeed} g</b>`;
+      updateStatus();
+    }
+
+    function addFood() {
+      const name = val("foodName").toLowerCase(), gram = num("foodGram");
+      if (!name || !gram) return alert("Isi nama & gram!");
+      if (!foodDB[name]) return alert("Makanan tidak ada di database!");
+      const cal = (foodDB[name].cal / 100) * gram;
+      const prot = (foodDB[name].protein / 100) * gram;
+      totalCalories += cal;
+      totalProtein += prot;
+      foodList.push({ name, gram, cal, prot });
+      save(); renderList(); updateStatus(); updateChart();
+      clearInput();
+    }
+
+    function renderList() {
+      foodListEl.innerHTML = "";
+      foodList.forEach(f => {
+        const li = document.createElement("li");
+        li.textContent = `${cap(f.name)} - ${f.gram}g = ${f.cal.toFixed(1)} kcal, ${f.prot.toFixed(1)}g protein`;
+        foodListEl.appendChild(li);
+      });
+      totalCalEl.textContent = totalCalories.toFixed(1);
+      totalProtEl.textContent = totalProtein.toFixed(1);
+    }
+
+    function updateStatus() {
+      if (!dailyNeed) return;
+      const diff = totalCalories - dailyNeed;
+      const pdiff = totalProtein - proteinNeed;
+      let s = "";
+      if (diff < -100) s += "🔥 Defisit kalori ";
+      else if (diff > 100) s += "⚠️ Surplus kalori ";
+      else s += "✅ Kalori seimbang ";
+      if (pdiff < -10) s += "| Kekurangan protein";
+      else if (pdiff > 10) s += "| Protein cukup 💪";
+      statusEl.textContent = s;
+    }
+
+    function save() {
+      localStorage.setItem("totalCalories", totalCalories);
+      localStorage.setItem("totalProtein", totalProtein);
+      localStorage.setItem("foodList", JSON.stringify(foodList));
+    }
+
+    function resetAll() {
+      if (!confirm("Hapus semua data?")) return;
+      totalCalories = 0;
+      totalProtein = 0;
+      foodList = [];
+      localStorage.clear();
+      renderList(); updateStatus(); updateChart(true);
+      dailyNeedEl.textContent = "";
+    }
+
+    function initChart() {
+      const ctx = document.getElementById("calorieChart").getContext("2d");
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Kalori', 'Protein'],
+          datasets: [{
+            label: 'Pencapaian (%)',
+            data: [0, 0],
+            backgroundColor: ['#3b82f6', '#10b981']
+          }]
+        },
+        options: { scales: { y: { beginAtZero: true, max: 150 } } }
+      });
+    }
+
+    function updateChart() {
+      if (!chart) return;
+      const kc = (totalCalories / dailyNeed) * 100;
+      const pc = (totalProtein / proteinNeed) * 100;
+      chart.data.datasets[0].data = [kc, pc];
+      chart.update();
+    }
+
+    const val = id => document.getElementById(id).value;
+    const num = id => parseFloat(document.getElementById(id).value);
+    const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+    const clearInput = () => {
+      document.getElementById("foodName").value = "";
+      document.getElementById("foodGram").value = "";
+    };
+  </script>
+</body>
+</html>
