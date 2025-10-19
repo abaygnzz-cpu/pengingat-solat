@@ -339,30 +339,6 @@
     a.download = `penghitung-kalori-${new Date().toISOString().slice(0,10)}.json`;
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   }
-
-  function handleImportFile(evt) {
-    const f = evt.target.files && evt.target.files[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const obj = JSON.parse(e.target.result);
-        if (obj && typeof obj === 'object') {
-          // basic validation & merge/replace
-          totalCalories = +obj.totalCalories || 0;
-          totalProtein = +obj.totalProtein || 0;
-          dailyNeed = +obj.dailyNeed || dailyNeed;
-          proteinNeed = +obj.proteinNeed || proteinNeed;
-          foodList = Array.isArray(obj.foodList) ? obj.foodList : foodList;
-          history = Array.isArray(obj.history) ? obj.history : history;
-          saveData();
-          localStorage.setItem('history', JSON.stringify(history));
-          renderList(); updateDisplay(); updateCharts();
-          alert('Data berhasil diimpor.');
-        } else throw new Error('Invalid file');
-      } catch (err) {
-        alert('Gagal mengimpor file: ' + (err.message || err));
-      }
     };
     reader.readAsText(f);
     evt.target.value = ''; // reset input
