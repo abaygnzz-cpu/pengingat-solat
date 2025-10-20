@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Penghitung Kalori Harian</title>
+<style>
+  body {
+    font-family: "Poppins", sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 0;
+    color: #222;
+  }
+  header {
+    background: #2563eb;
+    color: white;
+    text-align: center;
+    padding: 1rem;
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  .container {
+    max-width: 900px;
+    margin: 2rem auto;
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  input, select, button {
+    width: 100%;
+    padding: 0.7rem;
+    border: 1px solid #ccc;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+  }
+  button {
+    background: #2563eb;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  button:hover { background: #1e40af; }
+  .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .row > * { flex: 1; }
+  .summary {
+    background: #f9fafb;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+  }
+  th, td {
+    padding: 0.6rem;
+    border-bottom: 1px solid #eee;
+  }
+  .delete { color: #ef4444; cursor: pointer; }
+  #chart { margin-top: 1.5rem; }
+  h3 { margin-top: 1.2rem; }
+</style>
+</head>
+<body>
+<header>🍽️ Penghitung Kalori Harian Otomatis</header>
+<div class="container">
+  <h3>🧍‍♂️ Data Pengguna</h3>
+  <div class="row">
+    <input type="number" id="age" placeholder="Umur (tahun)">
+    <input type="number" id="height" placeholder="Tinggi badan (cm)">
+    <input type="number" id="weight" placeholder="Berat badan (kg)">
+  </div>
+  <div class="row">
+    <select id="gender">
+      <option value="male">Laki-laki</option>
+      <option value="female">Perempuan</option>
+    </select>
+    <select id="activity">
+      <option value="1.2">Sangat ringan (jarang olahraga)</option>
+      <option value="1.375">Ringan (1-2x/minggu)</option>
+      <option value="1.55">Sedang (3-5x/minggu)</option>
+      <option value="1.725">Berat (6-7x/minggu)</option>
+      <option value="1.9">Sangat berat (fisik intensif)</option>
+    </select>
+  </div>
+  <button id="calcNeed">Hitung Kebutuhan Kalori</button>
+
+  <h3>🍱 Input Makanan</h3>
+  <div class="row">
+    <input type="text" id="searchFood" placeholder="Cari makanan (contoh: ayam bakar, pasta)">
+    <datalist id="foodList"></datalist>
+  </div>
+  <div class="row">
+    <input type="number" id="foodWeight" placeholder="Berat (gram)">
+    <button id="addFood">Tambah</button>
+  </div>
+  <div class="row">
+    <select id="goal">
+      <option value="maintain">Pertahankan berat</option>
+      <option value="deficit">Defisit kalori (turun berat)</option>
+      <option value="surplus">Surplus kalori (naik berat)</option>
+    </select>
+  </div>
+
+  <div class="summary">
+    <p><strong>Kebutuhan Kalori:</strong> <span id="calNeed">0</span> kcal</p>
+    <p><strong>Kebutuhan Protein:</strong> <span id="proteinNeed">0</span> g</p>
+    <p><strong>Total Kalori Terkonsumsi:</strong> <span id="totalCal">0</span> kcal</p>
+    <p><strong>Total Protein Terkonsumsi:</strong> <span id="totalProtein">0</span> g</p>
+    <p><strong>Sisa Kalori Hari Ini:</strong> <span id="remainingCal">0</span> kcal</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Makanan</th><th>Kalori</th><th>Protein</th><th>Aksi</th></tr></thead>
+    <tbody id="foodTable"></tbody>
+  </table>
+
+  <canvas id="chart" height="200"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const foodData = {
+  "nasi putih": { cal: 130, protein: 2.5 },
+  "ayam bakar": { cal: 200, protein: 27 },
+  "ayam goreng": { cal: 260, protein: 25 },
+  "pasta": { cal: 130, protein: 5 },
+  "spaghetti bolognese": { cal: 350, protein: 15 },
+  "ikan goreng": { cal: 220, protein: 23 },
+  "tahu goreng": { cal: 150, protein: 8 },
+  "tempe goreng": { cal: 190, protein: 10 },
+  "telur rebus": { cal: 70, protein: 6 },
+  "roti tawar": { cal: 90, protein: 3 },
+  "sate ayam": { cal: 270, protein: 25 },
+  "soto ayam": { cal: 120, protein: 12 },
+  "jus alpukat": { cal: 160, protein: 2 },
+  "es teh manis": { cal: 90, protein: 0 },
+  "nasi goreng": { cal: 250, protein: 6 },
+  "rendang": { cal: 250, protein: 21 },
+  "mie goreng": { cal: 300, protein: 8 },
+  "bakso": { cal: 150, protein: 10 },
+  "sayur asem": { cal: 70, protein: 3 },
+  "gado-gado": { cal: 220, protein: 9 },
+  "pecel": { cal: 180, protein: 7 },
+  "martabak telur": { cal: 450, protein: 20 },
+  "jus jeruk": { cal: 85, protein: 1 },
+  "air mineral": { cal: 0, protein: 0 }
+};
+
+let foods = JSON.parse(localStorage.getItem("foods") || "[]");
+let calNeed = localStorage.getItem("calNeed") || 0;
+let proteinNeed = localStorage.getItem("proteinNeed") || 0;
+let goal = localStorage.getItem("goal") || "maintain";
+let chart;
+
+function calcCalories() {
+  const age = +document.getElementById("age").value;
+  const height = +document.getElementById("height").value;
+  const weight = +document.getElementById("weight").value;
+  const gender = document.getElementById("gender").value;
+  const activity = +document.getElementById("activity").value;
+
+  if (!age || !height || !weight) return alert("Isi semua data dengan benar!");
+  let bmr;
+  if (gender === "male") bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
+  else bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+
+  const totalCal = bmr * activity;
+  const adjust = goal === "deficit" ? -300 : goal === "surplus" ? 300 : 0;
+  calNeed = totalCal + adjust;
+  proteinNeed = goal === "surplus" ? weight * 2 : goal === "deficit" ? weight * 1.6 : weight * 1.4;
+
+  localStorage.setItem("calNeed", calNeed);
+  localStorage.setItem("proteinNeed", proteinNeed);
+  updateList();
+}
+
+document.getElementById("calcNeed").addEventListener("click", calcCalories);
+
+function updateList() {
+  const tbody = document.getElementById("foodTable");
+  tbody.innerHTML = "";
+  let totalCal = 0, totalProtein = 0;
+  foods.forEach((f, i) => {
+    totalCal += f.cal;
+    totalProtein += f.protein;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${f.name}</td><td>${f.cal.toFixed(1)}</td><td>${f.protein.toFixed(1)}</td><td><span class="delete" onclick="deleteFood(${i})">🗑️</span></td>`;
+    tbody.appendChild(tr);
+  });
+  const remaining = calNeed - totalCal;
+  document.getElementById("calNeed").textContent = Math.round(calNeed);
+  document.getElementById("proteinNeed").textContent = Math.round(proteinNeed);
+  document.getElementById("totalCal").textContent = totalCal.toFixed(1);
+  document.getElementById("totalProtein").textContent = totalProtein.toFixed(1);
+  document.getElementById("remainingCal").textContent = remaining.toFixed(1);
+
+  localStorage.setItem("foods", JSON.stringify(foods));
+  localStorage.setItem("goal", goal);
+  updateChart(totalCal, remaining);
+}
+
+function updateChart(totalCal, remaining) {
+  const ctx = document.getElementById("chart").getContext("2d");
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Terkonsumsi", "Sisa"],
+      datasets: [{
+        data: [totalCal, Math.max(remaining, 0)],
+        backgroundColor: ["#2563eb", "#e5e7eb"],
+        borderWidth: 0
+      }]
+    },
+    options: { plugins: { legend: { display: true } }, animation: { duration: 300 } }
+  });
+}
+
+function deleteFood(i) {
+  foods.splice(i, 1);
+  updateList();
+}
+
+document.getElementById("addFood").addEventListener("click", () => {
+  const name = document.getElementById("searchFood").value.toLowerCase();
+  const weight = parseFloat(document.getElementById("foodWeight").value);
+  if (!foodData[name] || isNaN(weight) || weight <= 0) return alert("Masukkan data valid!");
+  const cal = foodData[name].cal * weight / 100;
+  const protein = foodData[name].protein * weight / 100;
+  foods.push({ name, cal, protein });
+  document.getElementById("foodWeight").value = "";
+  updateList();
+});
+
+document.getElementById("searchFood").addEventListener("input", e => {
+  const val = e.target.value.toLowerCase();
+  const list = Object.keys(foodData).filter(f => f.includes(val)).slice(0, 15);
+  document.getElementById("foodList").innerHTML = list.map(f => `<option value="${f}">`).join("");
+});
+
+document.getElementById("goal").addEventListener("change", e => goal = e.target.value);
+updateList();
+</script>
+</body>
+</html>
