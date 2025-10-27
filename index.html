@@ -19,6 +19,7 @@
   .clear-btn{background:#ef4444;color:#fff;width:100%;margin-top:.8rem;padding:.7rem;border-radius:.5rem}
   .clear-btn:hover{background:#b91c1c}
   #chart{margin-top:1rem}
+  #searchFood{margin-top:.5rem}
 </style>
 </head>
 <body>
@@ -47,10 +48,16 @@
 
   <h3>🍱 Input Makanan</h3>
   <div class="row">
-    <input type="text" id="searchFood" list="foodList" placeholder="Cari makanan (contoh: ayam bakar, pasta)">
-    <datalist id="foodList"></datalist>
-  </div>
-  <div class="row">
+    <select id="categorySelect">
+      <option value="pokok">🍚 Makanan Pokok</option>
+      <option value="lauk">🍗 Lauk</option>
+      <option value="sayur">🥦 Sayur</option>
+      <option value="minuman">🥤 Minuman</option>
+      <option value="snack">🍩 Snack</option>
+      <option value="lainnya">🍽️ Lainnya</option>
+    </select>
+    <input type="text" id="searchFood" placeholder="Cari makanan...">
+    <select id="foodSelect"></select>
     <input type="number" id="foodWeight" placeholder="Berat (gram)">
     <button id="addFood">Tambah</button>
   </div>
@@ -81,39 +88,75 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// ============ DATA MAKANAN ==============
 const foodData={
-  "nasi putih":{cal:130,protein:2.5},"nasi goreng":{cal:250,protein:6},"nasi uduk":{cal:230,protein:4},
-  "ayam bakar":{cal:200,protein:27},"ayam goreng":{cal:260,protein:25},"ayam rebus":{cal:165,protein:31},"ayam geprek":{cal:280,protein:26},
-  "telur rebus":{cal:70,protein:6},"telur dadar":{cal:180,protein:9},
-  "ikan goreng":{cal:220,protein:23},"ikan bakar":{cal:150,protein:25},"udang goreng":{cal:210,protein:22},
-  "tahu goreng":{cal:150,protein:8},"tempe goreng":{cal:190,protein:10},"tumis kangkung":{cal:80,protein:3},
-  "sate ayam":{cal:270,protein:25},"rendang":{cal:250,protein:21},"soto ayam":{cal:120,protein:12},
-  "bakso":{cal:150,protein:10},"mie goreng":{cal:300,protein:8},"mie ayam":{cal:350,protein:15},
-  "pasta":{cal:130,protein:5},"spaghetti bolognese":{cal:350,protein:15},"lasagna":{cal:370,protein:18},
-  "roti tawar":{cal:90,protein:3},"roti isi coklat":{cal:200,protein:4},"kentang goreng":{cal:312,protein:3},
-  "sayur asem":{cal:70,protein:3},"sayur bayam":{cal:40,protein:2.5},"capcay":{cal:120,protein:6},
-  "gado-gado":{cal:220,protein:9},"pecel":{cal:180,protein:7},"sambal goreng tempe":{cal:160,protein:8},
-  "martabak telur":{cal:450,protein:20},"nugget ayam":{cal:270,protein:15},"burger":{cal:350,protein:20},
-  "pizza":{cal:285,protein:12},"kebab":{cal:300,protein:16},"hotdog":{cal:320,protein:14},
-  "jus alpukat":{cal:160,protein:2},"jus jeruk":{cal:85,protein:1},"es teh manis":{cal:90,protein:0},
-  "kopi susu":{cal:110,protein:2},"teh tawar":{cal:2,protein:0},"air mineral":{cal:0,protein:0}
+  pokok:{
+    "Nasi Putih":{cal:130,protein:2.5},"Nasi Goreng":{cal:250,protein:6},"Nasi Uduk":{cal:230,protein:4},
+    "Pasta":{cal:130,protein:5},"Spaghetti Bolognese":{cal:350,protein:15},
+    "Mie Goreng":{cal:300,protein:8},"Mie Ayam":{cal:350,protein:15},"Roti Tawar":{cal:90,protein:3},
+    "Kentang Rebus":{cal:80,protein:2}
+  },
+  lauk:{
+    "Ayam Bakar":{cal:200,protein:27},"Ayam Goreng":{cal:260,protein:25},"Ayam Rebus":{cal:165,protein:31},
+    "Ayam Geprek":{cal:280,protein:26},"Telur Rebus":{cal:70,protein:6},"Telur Dadar":{cal:180,protein:9},
+    "Ikan Goreng":{cal:220,protein:23},"Ikan Bakar":{cal:150,protein:25},"Udang Goreng":{cal:210,protein:22},
+    "Tahu Goreng":{cal:150,protein:8},"Tempe Goreng":{cal:190,protein:10},"Rendang":{cal:250,protein:21},
+    "Sate Ayam":{cal:270,protein:25},"Bakso":{cal:150,protein:10}
+  },
+  sayur:{
+    "Tumis Kangkung":{cal:80,protein:3},"Sayur Asem":{cal:70,protein:3},"Sayur Bayam":{cal:40,protein:2.5},
+    "Capcay":{cal:120,protein:6},"Gado-Gado":{cal:220,protein:9},"Pecel":{cal:180,protein:7}
+  },
+  minuman:{
+    "Jus Alpukat":{cal:160,protein:2},"Jus Jeruk":{cal:85,protein:1},"Es Teh Manis":{cal:90,protein:0},
+    "Kopi Susu":{cal:110,protein:2},"Teh Tawar":{cal:2,protein:0},"Air Mineral":{cal:0,protein:0}
+  },
+  snack:{
+    "Martabak Telur":{cal:450,protein:20},"Nugget Ayam":{cal:270,protein:15},
+    "Burger":{cal:350,protein:20},"Pizza":{cal:285,protein:12},"Kebab":{cal:300,protein:16},"Hotdog":{cal:320,protein:14},
+    "Roti Isi Coklat":{cal:200,protein:4},"Kentang Goreng":{cal:312,protein:3}
+  },
+  lainnya:{
+    "Soto Ayam":{cal:120,protein:12},"Sambal Goreng Tempe":{cal:160,protein:8},"Lasagna":{cal:370,protein:18}
+  }
 };
 
+const foodSelect=document.getElementById("foodSelect");
+const searchFood=document.getElementById("searchFood");
+const categorySelect=document.getElementById("categorySelect");
 let foods=JSON.parse(localStorage.getItem("foods")||"[]"),
 calNeed=+localStorage.getItem("calNeed")||0,
 proteinNeed=+localStorage.getItem("proteinNeed")||0,
 goal=localStorage.getItem("goal")||"maintain",
 chart;
 
+// ============ DROPDOWN & PENCARIAN ============
+function renderFoodOptions(keyword=""){
+  const cat=categorySelect.value;
+  foodSelect.innerHTML="";
+  Object.keys(foodData[cat])
+    .filter(f=>f.toLowerCase().includes(keyword.toLowerCase()))
+    .forEach(f=>{
+      const opt=document.createElement("option");
+      opt.value=f;opt.textContent=f;
+      foodSelect.appendChild(opt);
+    });
+}
+categorySelect.onchange=()=>renderFoodOptions(searchFood.value);
+searchFood.oninput=()=>renderFoodOptions(searchFood.value);
+renderFoodOptions();
+
+// ============ UPDATE GRAFIK ============
 function updateChart(total,remain){
   const ctx=document.getElementById("chart").getContext("2d");
   if(chart)chart.destroy();
   chart=new Chart(ctx,{type:"doughnut",
     data:{labels:["Terkonsumsi","Sisa"],
     datasets:[{data:[total,Math.max(remain,0)],backgroundColor:["#2563eb","#e5e7eb"],borderWidth:0}]},
-    options:{plugins:{legend:{display:true}},animation:{duration:250}}});
+    options:{plugins:{legend:{display:true}},animation:{duration:200}}});
 }
 
+// ============ UPDATE TABEL ============
 function updateList(){
   const tbody=document.getElementById("foodTable");
   tbody.innerHTML="";
@@ -133,9 +176,9 @@ function updateList(){
   localStorage.setItem("goal",goal);
   updateChart(tCal,calNeed-tCal);
 }
-
 function del(i){foods.splice(i,1);updateList();}
 
+// ============ HITUNG KEBUTUHAN ============
 function calcNeed(){
   const a=+document.getElementById("age").value,
         h=+document.getElementById("height").value,
@@ -153,34 +196,23 @@ function calcNeed(){
   goal=goalSel;
   updateList();
 }
-
 document.getElementById("calcNeed").onclick=calcNeed;
 
+// ============ TAMBAH & HAPUS ============
 document.getElementById("addFood").onclick=()=>{
-  const n=document.getElementById("searchFood").value.toLowerCase(),
-        w=parseFloat(document.getElementById("foodWeight").value);
-  if(!foodData[n]||isNaN(w)||w<=0)return alert("Makanan/berat tidak valid!");
-  foods.push({name:n,cal:foodData[n].cal*w/100,protein:foodData[n].protein*w/100});
+  const cat=categorySelect.value,n=foodSelect.value,w=parseFloat(document.getElementById("foodWeight").value);
+  if(!foodData[cat][n]||isNaN(w)||w<=0)return alert("Pilih makanan dan isi berat dengan benar!");
+  foods.push({name:n,cal:foodData[cat][n].cal*w/100,protein:foodData[cat][n].protein*w/100});
   document.getElementById("foodWeight").value="";
   updateList();
 };
-
-document.getElementById("searchFood").oninput=e=>{
-  const val=e.target.value.toLowerCase();
-  document.getElementById("foodList").innerHTML=
-    Object.keys(foodData).filter(f=>f.includes(val)).slice(0,15)
-    .map(f=>`<option value="${f}">`).join("");
-};
-
 document.getElementById("goal").onchange=e=>goal=e.target.value;
-
 document.getElementById("clearAll").onclick=()=>{
   if(confirm("Yakin hapus semua data?")){
     foods=[];localStorage.clear();calNeed=proteinNeed=0;updateList();
   }
 };
-
 updateList();
 </script>
 </body>
-    </html>
+</html>
